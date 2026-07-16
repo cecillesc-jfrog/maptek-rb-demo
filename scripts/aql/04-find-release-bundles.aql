@@ -3,5 +3,5 @@ items.find({
   "@rb.build_type": {"$eq": "release"},
   "repo":           {"$match": "maptek-docker-local"}
 }).include(
-  "name", "path", "repo", "created", "property"
+  "name", "path", "repo", "created"
 ).sort({"$desc": ["created"]})

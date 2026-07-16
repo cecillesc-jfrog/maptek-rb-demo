@@ -4,5 +4,5 @@ items.find({
   "@component.team": {"$eq": "platform"},
   "repo":            {"$match": "maptek-docker-local"}
 }).include(
-  "name", "path", "repo", "created", "property"
+  "name", "path", "repo", "created"
 ).sort({"$asc": ["path"]})
