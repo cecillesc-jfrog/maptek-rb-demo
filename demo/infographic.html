@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JFrog Release Bundles — Concepts & Building Blocks</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f1724;
+    color: #e2e8f0;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #40be46;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+  .header p {
+    font-size: 16px;
+    color: #94a3b8;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card-desc {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+
+  /* ── Accent colors ── */
+  .green  { color: #40be46; }
+  .blue   { color: #60a5fa; }
+  .purple { color: #a78bfa; }
+  .yellow { color: #fbbf24; }
+  .orange { color: #fb923c; }
+  .pink   { color: #f472b6; }
+  .teal   { color: #2dd4bf; }
+
+  .border-green  { border-color: #40be46; }
+  .border-blue   { border-color: #60a5fa; }
+  .border-purple { border-color: #a78bfa; }
+  .border-yellow { border-color: #fbbf24; }
+  .border-teal   { border-color: #2dd4bf; }
+
+  /* ── Pill / badge ── */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin: 3px 3px 3px 0;
+  }
+  .pill-green  { background: #14532d; color: #4ade80; }
+  .pill-blue   { background: #1e3a5f; color: #93c5fd; }
+  .pill-purple { background: #2e1065; color: #c4b5fd; }
+  .pill-yellow { background: #451a03; color: #fcd34d; }
+  .pill-orange { background: #431407; color: #fdba74; }
+  .pill-teal   { background: #0d3330; color: #5eead4; }
+  .pill-gray   { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+  /* ── Arrow ── */
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 24px;
+    padding: 8px 0;
+  }
+  .arrow-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 20px;
+    padding: 0 8px;
+  }
+
+  /* ── Grid layouts ── */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .flow   { display: flex; align-items: stretch; gap: 0; }
+
+  /* ── Section spacing ── */
+  .section { margin-bottom: 40px; }
+
+  /* ── Flow diagram ── */
+  .flow-block {
+    flex: 1;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 18px 16px;
+    text-align: center;
+    position: relative;
+  }
+  .flow-block .icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .flow-block .title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .flow-block .desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+  .flow-connector {
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    color: #334155;
+    font-size: 20px;
+  }
+
+  /* ── Lifecycle strip ── */
+  .lifecycle {
+    display: flex;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #334155;
+  }
+  .stage {
+    flex: 1;
+    padding: 16px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .stage-dev    { background: #1a2744; border-right: 1px solid #334155; }
+  .stage-qa     { background: #1a3344; border-right: 1px solid #334155; }
+  .stage-staging{ background: #1a3322; border-right: 1px solid #334155; }
+  .stage-prod   { background: #2a1a10; }
+  .stage-label  { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .stage-action { font-size: 11px; color: #64748b; line-height: 1.4; }
+  .stage-arrow  {
+    position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+    width: 24px; height: 24px;
+    background: #0f1724; border: 1px solid #334155; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #475569; z-index: 1;
+  }
+
+  /* ── Service chips ── */
+  .service-chip {
+    background: #0f1724;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .service-chip .svc-icon { font-size: 20px; margin-bottom: 4px; }
+  .service-chip .svc-name { font-size: 11px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px; }
+  .service-chip .svc-props { font-size: 10px; color: #475569; line-height: 1.6; }
+
+  /* ── Bundle box ── */
+  .bundle-box {
+    border: 2px solid #40be46;
+    border-radius: 12px;
+    padding: 20px;
+    background: #0d1f12;
+    position: relative;
+  }
+  .bundle-box .bundle-label {
+    position: absolute;
+    top: -12px; left: 16px;
+    background: #40be46;
+    color: #0a0a0a;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 12px;
+    border-radius: 20px;
+  }
+
+  /* ── Property row ── */
+  .prop-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .prop-key {
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: #7dd3fc;
+    min-width: 160px;
+  }
+  .prop-val {
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: #fbbf24;
+  }
+
+  /* ── AQL box ── */
+  .aql-box {
+    background: #0f1724;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .aql-keyword { color: #c084fc; }
+  .aql-field   { color: #7dd3fc; }
+  .aql-value   { color: #fbbf24; }
+  .aql-op      { color: #f472b6; }
+  .aql-comment { color: #475569; }
+
+  /* ── Xray ── */
+  .xray-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .xray-severity {
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 80px;
+  }
+  .xray-track {
+    flex: 1;
+    height: 8px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .xray-fill {
+    height: 100%;
+    border-radius: 4px;
+  }
+  .xray-count {
+    font-size: 11px;
+    color: #64748b;
+    min-width: 30px;
+    text-align: right;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid #1e293b;
+    margin: 32px 0;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  @media (max-width: 768px) {
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-5 { grid-template-columns: repeat(2, 1fr); }
+    .flow   { flex-direction: column; }
+    .flow-connector { transform: rotate(90deg); padding: 4px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <div class="eyebrow">JFrog Artifactory</div>
+    <h1>Release Bundles — Concepts & Building Blocks</h1>
+    <p>A visual guide to artifact metadata, Release Bundle v2, lifecycle promotion, and AQL querying — built around the Maptek Geo Suite demo.</p>
+  </div>
+
+
+  <!-- ── SECTION 1: WHAT IS ARTIFACTORY ── -->
+  <div class="section">
+    <div class="section-label">1 — Foundation</div>
+    <div class="grid-3">
+
+      <div class="card border-blue" style="border-left: 3px solid #60a5fa;">
+        <div class="card-title blue">Repository</div>
+        <div class="card-desc">
+          A storage location in Artifactory that holds versioned artifacts. Each repo has a type (Docker, Maven, npm…) and a scope: <strong>local</strong> (you push to it), <strong>remote</strong> (proxies external), or <strong>virtual</strong> (aggregates multiple).<br><br>
+          <span class="pill pill-blue">maptek-docker-local</span>
+          <span class="pill pill-gray">local · Docker</span>
+        </div>
+      </div>
+
+      <div class="card border-purple" style="border-left: 3px solid #a78bfa;">
+        <div class="card-title purple">Artifact</div>
+        <div class="card-desc">
+          Any binary stored in a repository — a Docker image manifest, a JAR, a tarball. Identified by its repo path and a content hash (SHA-256).<br><br>
+          <span class="pill pill-purple">geo-api:2026.demo.1</span><br>
+          <code style="font-size:10px; color:#64748b;">maptek-docker-local/geo-api/<br>2026.demo.1/manifest.json</code>
+        </div>
+      </div>
+
+      <div class="card border-yellow" style="border-left: 3px solid #fbbf24;">
+        <div class="card-title yellow">Properties (Tags)</div>
+        <div class="card-desc">
+          Arbitrary key=value pairs attached to any artifact. They are <strong>searchable</strong> and <strong>filterable</strong> via AQL. Properties are the foundation of metadata-driven workflows.<br><br>
+          <span class="pill pill-yellow">project.name=maptek-geo-suite</span>
+          <span class="pill pill-yellow">build.type=release</span>
+          <span class="pill pill-yellow">component.team=platform</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 2: CI/CD FLOW ── -->
+  <div class="section">
+    <div class="section-label">2 — How Artifacts Get Into Artifactory</div>
+    <div class="flow">
+      <div class="flow-block">
+        <div class="icon">💻</div>
+        <div class="title blue">Source Code</div>
+        <div class="desc">Developers push code to GitHub. Each commit triggers a pipeline.</div>
+      </div>
+      <div class="flow-connector">›</div>
+      <div class="flow-block">
+        <div class="icon">⚙️</div>
+        <div class="title purple">CI Pipeline</div>
+        <div class="desc">GitHub Actions builds Docker images and pushes them to Artifactory.</div>
+      </div>
+      <div class="flow-connector">›</div>
+      <div class="flow-block">
+        <div class="icon">📦</div>
+        <div class="title yellow">Artifacts Stored</div>
+        <div class="desc">Images land in <code style="font-size:10px">maptek-docker-local</code> with Docker metadata.</div>
+      </div>
+      <div class="flow-connector">›</div>
+      <div class="flow-block">
+        <div class="icon">🏷️</div>
+        <div class="title orange">Properties Set</div>
+        <div class="desc">Pipeline runs <code style="font-size:10px">jf rt sp</code> to stamp each artifact with rich metadata.</div>
+      </div>
+      <div class="flow-connector">›</div>
+      <div class="flow-block" style="border-color: #40be46;">
+        <div class="icon">🎁</div>
+        <div class="title green">Release Bundle</div>
+        <div class="desc">Pipeline runs <code style="font-size:10px">jf rbc</code> to group tagged artifacts into a signed bundle.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 3: THE MAPTEK ARTIFACTS ── -->
+  <div class="section">
+    <div class="section-label">3 — Maptek Geo Suite — 5 Services, Each Tagged Individually</div>
+    <div class="grid-5">
+
+      <div class="service-chip">
+        <div class="svc-icon">🌐</div>
+        <div class="svc-name">geo-api</div>
+        <div class="svc-props">
+          team: <span class="green">platform</span><br>
+          type: <span class="blue">api</span><br>
+          build: <span class="yellow">release</span>
+        </div>
+      </div>
+
+      <div class="service-chip">
+        <div class="svc-icon">⚙️</div>
+        <div class="svc-name">data-processor</div>
+        <div class="svc-props">
+          team: <span class="teal">core</span><br>
+          type: <span class="purple">worker</span><br>
+          build: <span class="yellow">release</span>
+        </div>
+      </div>
+
+      <div class="service-chip">
+        <div class="svc-icon">🖥️</div>
+        <div class="svc-name">visualizer</div>
+        <div class="svc-props">
+          team: <span class="pink">frontend</span><br>
+          type: <span class="pink">frontend</span><br>
+          build: <span class="yellow">release</span>
+        </div>
+      </div>
+
+      <div class="service-chip">
+        <div class="svc-icon">📄</div>
+        <div class="svc-name">report-generator</div>
+        <div class="svc-props">
+          team: <span class="teal">core</span><br>
+          type: <span class="purple">worker</span><br>
+          build: <span class="yellow">release</span>
+        </div>
+      </div>
+
+      <div class="service-chip">
+        <div class="svc-icon">🔒</div>
+        <div class="svc-name">auth-service</div>
+        <div class="svc-props">
+          team: <span class="green">platform</span><br>
+          type: <span class="orange">security</span><br>
+          build: <span class="yellow">release</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 16px;">
+      <div class="section-label" style="margin-bottom: 10px;">Properties stamped on every manifest.json</div>
+      <div class="card" style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 24px;">
+          <div class="prop-row"><span class="prop-key">project.name</span><span class="prop-val">maptek-geo-suite</span></div>
+          <div class="prop-row"><span class="prop-key">project.version</span><span class="prop-val">2026.demo.2</span></div>
+          <div class="prop-row"><span class="prop-key">build.type</span><span class="prop-val">release</span></div>
+          <div class="prop-row"><span class="prop-key">component.name</span><span class="prop-val">&lt;service-name&gt;</span></div>
+          <div class="prop-row"><span class="prop-key">component.team</span><span class="prop-val">platform | core | frontend</span></div>
+          <div class="prop-row"><span class="prop-key">component.service_type</span><span class="prop-val">api | worker | frontend | security</span></div>
+          <div class="prop-row"><span class="prop-key">git.commit</span><span class="prop-val">&lt;sha&gt;</span></div>
+          <div class="prop-row"><span class="prop-key">build.number</span><span class="prop-val">2026.demo.2-12</span></div>
+          <div class="prop-row"><span class="prop-key">rb.project</span><span class="prop-val">maptek-geo-suite</span></div>
+          <div class="prop-row"><span class="prop-key">rb.build_type</span><span class="prop-val">release</span></div>
+          <div class="prop-row"><span class="prop-key">rb.pipeline</span><span class="prop-val">github-actions</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 4: WHAT IS A RELEASE BUNDLE ── -->
+  <div class="section">
+    <div class="section-label">4 — What Is a Release Bundle v2?</div>
+
+    <div class="bundle-box">
+      <div class="bundle-label">Release Bundle v2</div>
+
+      <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px;">
+
+        <div style="flex: 1; min-width: 260px;">
+          <div style="font-size: 14px; font-weight: 700; color: #40be46; margin-bottom: 10px;">maptek-geo-suite @ 2026.demo.2</div>
+          <div style="font-size: 12px; color: #94a3b8; margin-bottom: 12px; line-height: 1.6;">
+            A Release Bundle is a <strong style="color:#e2e8f0">versioned, cryptographically signed</strong> collection of artifacts. It is the unit of promotion through environments and distribution to edge nodes.
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span class="pill pill-green">status: COMPLETED</span>
+            <span class="pill pill-teal">tag: QA-Passed</span>
+            <span class="pill pill-blue">signed: default-lifecycle-key</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b; line-height: 1.8;">
+            <div>📦 5 artifacts included</div>
+            <div>🔏 GPG/RSA signed at creation</div>
+            <div>🏷️ Annotatable with custom tags</div>
+            <div>🔒 Immutable once finalized</div>
+          </div>
+        </div>
+
+        <div style="flex: 1; min-width: 260px;">
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Artifacts in this bundle</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="background: #0f1724; border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace; color: #94a3b8;">geo-api/2026.demo.1/manifest.json</div>
+            <div style="background: #0f1724; border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace; color: #94a3b8;">data-processor/2026.demo.1/manifest.json</div>
+            <div style="background: #0f1724; border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace; color: #94a3b8;">visualizer/2026.demo.1/manifest.json</div>
+            <div style="background: #0f1724; border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace; color: #94a3b8;">report-generator/2026.demo.1/manifest.json</div>
+            <div style="background: #0f1724; border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace; color: #94a3b8;">auth-service/2026.demo.1/manifest.json</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div class="card" style="border-left: 3px solid #40be46; padding: 16px;">
+        <div class="card-title green" style="margin-bottom: 6px;">Created via CLI</div>
+        <code style="font-size: 11px; color: #94a3b8; line-height: 1.8;">
+          jf rbc \<br>
+          &nbsp;&nbsp;--spec=rb-spec.json \<br>
+          &nbsp;&nbsp;--signing-key="default-lifecycle-key" \<br>
+          &nbsp;&nbsp;"maptek-geo-suite" "2026.demo.2"
+        </code>
+      </div>
+      <div class="card" style="border-left: 3px solid #2dd4bf; padding: 16px;">
+        <div class="card-title teal" style="margin-bottom: 6px;">Tagged via Annotate</div>
+        <code style="font-size: 11px; color: #94a3b8; line-height: 1.8;">
+          jf rba \<br>
+          &nbsp;&nbsp;--tag="QA-Passed" \<br>
+          &nbsp;&nbsp;"maptek-geo-suite" "2026.demo.2"
+        </code>
+      </div>
+      <div class="card" style="border-left: 3px solid #a78bfa; padding: 16px;">
+        <div class="card-title purple" style="margin-bottom: 6px;">AQL Spec (Source)</div>
+        <code style="font-size: 11px; color: #94a3b8; line-height: 1.8;">
+          items.find({<br>
+          &nbsp;&nbsp;"@project.name": {"$eq": "..."},<br>
+          &nbsp;&nbsp;"@project.version": {"$eq": "..."}<br>
+          })
+        </code>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 5: DUAL TAGGING ── -->
+  <div class="section">
+    <div class="section-label">5 — Dual Tagging: Per-Artifact + Collective (Bundle-Level)</div>
+    <div class="grid-2">
+
+      <div class="card border-blue" style="border-left: 3px solid #60a5fa;">
+        <div class="card-title blue">Per-Artifact Properties</div>
+        <div class="card-desc" style="margin-bottom: 12px;">Each artifact has its own metadata describing what it is and where it came from. Set by <code>jf rt sp</code>.</div>
+        <div class="prop-row"><span class="prop-key">component.team</span><span class="prop-val">platform</span></div>
+        <div class="prop-row"><span class="prop-key">component.service_type</span><span class="prop-val">security</span></div>
+        <div class="prop-row"><span class="prop-key">build.type</span><span class="prop-val">release</span></div>
+        <div class="prop-row"><span class="prop-key">git.commit</span><span class="prop-val">bc3797...</span></div>
+        <div style="margin-top: 12px; font-size: 11px; color: #475569;">
+          ✅ Queryable independently of any bundle<br>
+          ✅ Survives bundle deletion
+        </div>
+      </div>
+
+      <div class="card border-green" style="border-left: 3px solid #40be46;">
+        <div class="card-title green">Collective (Bundle-Level) Properties</div>
+        <div class="card-desc" style="margin-bottom: 12px;">Describe the bundle as a whole — stamped on every artifact in the bundle. Set by <code>jf rt sp</code> using <code>rb.*</code> prefix.</div>
+        <div class="prop-row"><span class="prop-key">rb.project</span><span class="prop-val">maptek-geo-suite</span></div>
+        <div class="prop-row"><span class="prop-key">rb.build_type</span><span class="prop-val">release</span></div>
+        <div class="prop-row"><span class="prop-key">rb.pipeline</span><span class="prop-val">github-actions</span></div>
+        <div style="margin-top: 12px; font-size: 11px; color: #475569;">
+          ✅ Cross-filterable with per-artifact props<br>
+          ✅ Answers "which artifacts are part of THIS release?"
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 16px;" class="card" style="background: #0d1f12; border-color: #14532d;">
+      <div style="font-size: 12px; font-weight: 700; color: #4ade80; margin-bottom: 10px;">Cross-Filter AQL — "Platform team artifacts from GitHub Actions release bundles"</div>
+      <div class="aql-box">
+        <span class="aql-keyword">items.find</span>({<br>
+        &nbsp;&nbsp;<span class="aql-field">"@rb.project"</span>:     {<span class="aql-op">"$eq"</span>: <span class="aql-value">"maptek-geo-suite"</span>},<br>
+        &nbsp;&nbsp;<span class="aql-field">"@rb.pipeline"</span>:    {<span class="aql-op">"$eq"</span>: <span class="aql-value">"github-actions"</span>},<br>
+        &nbsp;&nbsp;<span class="aql-field">"@component.team"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"platform"</span>}<br>
+        }).<span class="aql-keyword">include</span>(<span class="aql-value">"name"</span>, <span class="aql-value">"path"</span>, <span class="aql-value">"created"</span>)
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 6: LIFECYCLE ── -->
+  <div class="section">
+    <div class="section-label">6 — Release Lifecycle — Promotion Through Environments</div>
+
+    <div class="lifecycle">
+      <div class="stage stage-dev">
+        <div class="stage-label blue">DEV</div>
+        <div class="stage-action">Bundle created<br>Automated tests run<br>Xray scan triggered</div>
+        <div class="stage-arrow">›</div>
+      </div>
+      <div class="stage stage-qa">
+        <div class="stage-label teal">QA</div>
+        <div class="stage-action">QA team validates<br>Tag: "QA-Passed"<br>jf rbp → QA</div>
+        <div class="stage-arrow">›</div>
+      </div>
+      <div class="stage stage-staging">
+        <div class="stage-label green">STAGING</div>
+        <div class="stage-action">Integration tests<br>Performance check<br>jf rbp → STAGING</div>
+        <div class="stage-arrow">›</div>
+      </div>
+      <div class="stage stage-prod">
+        <div class="stage-label yellow">PROD</div>
+        <div class="stage-action">Final approval<br>Distributed to edges<br>jf rbd → PROD</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+      <div style="text-align: center; font-size: 11px; color: #475569;">
+        <code style="color: #60a5fa;">jf rbc</code><br>Create bundle
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #475569;">
+        <code style="color: #2dd4bf;">jf rba --tag</code><br>Annotate
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #475569;">
+        <code style="color: #40be46;">jf rbp</code><br>Promote
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #475569;">
+        <code style="color: #fbbf24;">jf rbd</code><br>Distribute
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 7: AQL ── -->
+  <div class="section">
+    <div class="section-label">7 — AQL — Artifactory Query Language</div>
+    <div class="grid-2">
+
+      <div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 10px; line-height: 1.6;">
+          AQL is a SQL-like query language for searching artifacts and their properties. Sent as a POST request to <code style="color:#7dd3fc">/artifactory/api/search/aql</code>.
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div class="pill pill-blue" style="margin-bottom: 6px; display: block; width: fit-content;">Script 01 — Find by project + version</div>
+          <div class="aql-box">
+            <span class="aql-keyword">items.find</span>({<br>
+            &nbsp;&nbsp;<span class="aql-field">"@project.version"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"2026.demo.2"</span>}<br>
+            })
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div class="pill pill-green" style="margin-bottom: 6px; display: block; width: fit-content;">Script 02 — Release builds since date</div>
+          <div class="aql-box">
+            <span class="aql-keyword">items.find</span>({<br>
+            &nbsp;&nbsp;<span class="aql-field">"@build.type"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"release"</span>},<br>
+            &nbsp;&nbsp;<span class="aql-field">"created"</span>: {<span class="aql-op">"$gte"</span>: <span class="aql-value">"2026-07-16..."</span>}<br>
+            })
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="margin-bottom: 12px;">
+          <div class="pill pill-purple" style="margin-bottom: 6px; display: block; width: fit-content;">Script 03 — Filter by team</div>
+          <div class="aql-box">
+            <span class="aql-keyword">items.find</span>({<br>
+            &nbsp;&nbsp;<span class="aql-field">"@component.team"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"platform"</span>}<br>
+            })
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div class="pill pill-teal" style="margin-bottom: 6px; display: block; width: fit-content;">Script 05 — Cross-filter</div>
+          <div class="aql-box">
+            <span class="aql-keyword">items.find</span>({<br>
+            &nbsp;&nbsp;<span class="aql-field">"@rb.pipeline"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"github-actions"</span>},<br>
+            &nbsp;&nbsp;<span class="aql-field">"@component.team"</span>: {<span class="aql-op">"$eq"</span>: <span class="aql-value">"platform"</span>}<br>
+            })
+          </div>
+        </div>
+
+        <div>
+          <div class="pill pill-yellow" style="margin-bottom: 6px; display: block; width: fit-content;">Script 06 — Find bundles by tag (Lifecycle API)</div>
+          <div class="aql-box" style="font-size: 11px;">
+            <span style="color: #94a3b8;">GET</span> /lifecycle/api/v2/<br>
+            &nbsp;&nbsp;release_bundle/records/<br>
+            &nbsp;&nbsp;maptek-geo-suite<span style="color: #fbbf24;">?tag=QA-Passed</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ── SECTION 8: XRAY ── -->
+  <div class="section">
+    <div class="section-label">8 — JFrog Xray — Security Scanning Built In</div>
+    <div class="grid-2">
+
+      <div class="card" style="border-left: 3px solid #fb923c;">
+        <div class="card-title orange">What Xray Does</div>
+        <div class="card-desc" style="margin-bottom: 14px; line-height: 1.7;">
+          Xray automatically scans every artifact in Artifactory for known CVEs, license compliance issues, and malware. Scans are triggered when artifacts are uploaded or when a Release Bundle is created.
+        </div>
+        <div style="font-size: 11px; color: #64748b; line-height: 2;">
+          🔍 Deep recursive dependency scanning<br>
+          📋 SBOM generation (CycloneDX / SPDX)<br>
+          🚫 Block downloads on policy violation<br>
+          📊 Contextual analysis — exploit reachability
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 3px solid #ef4444;">
+        <div class="card-title" style="color: #f87171;">Vulnerability Severity Levels</div>
+        <div style="margin-top: 12px;">
+          <div class="xray-bar">
+            <div class="xray-severity" style="color: #ef4444;">Critical</div>
+            <div class="xray-track"><div class="xray-fill" style="background: #ef4444; width: 30%;"></div></div>
+            <div class="xray-count">3</div>
+          </div>
+          <div class="xray-bar">
+            <div class="xray-severity" style="color: #fb923c;">High</div>
+            <div class="xray-track"><div class="xray-fill" style="background: #fb923c; width: 55%;"></div></div>
+            <div class="xray-count">7</div>
+          </div>
+          <div class="xray-bar">
+            <div class="xray-severity" style="color: #fbbf24;">Medium</div>
+            <div class="xray-track"><div class="xray-fill" style="background: #fbbf24; width: 75%;"></div></div>
+            <div class="xray-count">12</div>
+          </div>
+          <div class="xray-bar">
+            <div class="xray-severity" style="color: #60a5fa;">Low</div>
+            <div class="xray-track"><div class="xray-fill" style="background: #60a5fa; width: 40%;"></div></div>
+            <div class="xray-count">8</div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; font-size: 11px; color: #475569;">
+          Results visible in the Release Bundle UI under the Security tab. Policies can block promotion if critical CVEs are found.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ── SUMMARY ── -->
+  <div class="section">
+    <div class="section-label">Summary — The Full Picture</div>
+    <div class="card" style="background: #0d1a2a; border-color: #1e3a5f; padding: 28px;">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;">
+        <div>
+          <div style="font-size: 28px; margin-bottom: 8px;">🏷️</div>
+          <div style="font-size: 13px; font-weight: 700; color: #60a5fa; margin-bottom: 6px;">Tag Every Artifact</div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.6;">Rich metadata on each artifact makes them independently discoverable via AQL — regardless of bundles.</div>
+        </div>
+        <div>
+          <div style="font-size: 28px; margin-bottom: 8px;">🎁</div>
+          <div style="font-size: 13px; font-weight: 700; color: #40be46; margin-bottom: 6px;">Bundle & Sign</div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.6;">Group artifacts into a signed Release Bundle — the immutable unit of delivery that travels through environments.</div>
+        </div>
+        <div>
+          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">Query Anything</div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.6;">AQL lets you find builds by version, date, team, pipeline — combining per-artifact and collective metadata.</div>
+        </div>
+        <div>
+          <div style="font-size: 28px; margin-bottom: 8px;">🚀</div>
+          <div style="font-size: 13px; font-weight: 700; color: #fb923c; margin-bottom: 6px;">Promote Safely</div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.6;">Xray scans, policy gates, and lifecycle promotion ensure only safe, approved bundles reach production.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="footer">
+    JFrog Artifactory — Release Lifecycle Management v2 &nbsp;·&nbsp; Demo: maptek-rb-demo &nbsp;·&nbsp; hts1.jfrog.io
+  </div>
+
+</div>
+</body>
+</html>
