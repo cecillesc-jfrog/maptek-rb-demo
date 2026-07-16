@@ -2,7 +2,7 @@ items.find({
   "@project.name": {"$eq": "maptek-geo-suite"},
   "@build.type":   {"$eq": "release"},
   "repo":          {"$match": "maptek-docker-local"},
-  "created":       {"$gte": "2025-10-01T00:00:00.000Z"}
+  "created":       {"$gte": "2026-07-16T00:00:00.000Z"}
 }).include(
   "name", "repo", "path", "created"
 ).sort({"$desc": ["created"]})
