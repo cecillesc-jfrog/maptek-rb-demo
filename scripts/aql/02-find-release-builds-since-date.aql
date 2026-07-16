@@ -1,9 +1,3 @@
-/* USE CASE: "Find all release builds for project maptek-geo-suite since October 2025"
-   Combines a property filter (build.type=release) with an Artifactory
-   date filter (created >= ISO date). Returns one manifest.json per
-   service per release — sort descending so newest appears first.
-   Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql */
-
 items.find({
   "@project.name": {"$eq": "maptek-geo-suite"},
   "@build.type":   {"$eq": "release"},
@@ -12,23 +6,3 @@ items.find({
 }).include(
   "name", "repo", "path", "created", "property"
 ).sort({"$desc": ["created"]})
-
-
-/* ── Variant: all build types (release + snapshot + hotfix), newest 50 ────
-items.find({
-  "@project.name": {"$eq": "maptek-geo-suite"},
-  "repo":          {"$match": "maptek-docker-local"},
-  "created":       {"$gte": "2025-10-01T00:00:00.000Z"}
-}).include("name", "repo", "path", "created", "property")
-  .sort({"$desc": ["created"]})
-  .limit(50)
-*/
-
-
-/* ── Variant: hotfix builds only, any project ───────────────────────────
-items.find({
-  "@build.type": {"$eq": "hotfix"},
-  "repo":        {"$match": "maptek-docker-local"}
-}).include("name", "repo", "path", "created", "property")
-  .sort({"$desc": ["created"]})
-*/
