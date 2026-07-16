@@ -1,12 +1,8 @@
-// USE CASE: Query Release Bundles by their collective (bundle-level) metadata
-//
-// The rb.* properties are set on the bundle itself via --prop in jf rbc.
-// These are distinct from per-artifact properties — they describe the
-// bundle as a whole (e.g. all components included, pipeline origin).
-//
-// Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql
+/* USE CASE: Query Release Bundles by their collective (bundle-level) metadata
+   The rb.* properties are set on each artifact via jf rt sp.
+   Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql */
 
-// ── Find all release bundles for the project ─────────────────────────────────
+/* ── Find all release bundles for the project ──────────────────────────── */
 release_bundles.find({
   "@rb.project":    {"$eq": "maptek-geo-suite"},
   "@rb.build_type": {"$eq": "release"}
@@ -15,8 +11,7 @@ release_bundles.find({
 ).sort({"$desc": ["created"]})
 
 
-// ── Variant: find a specific bundle by name + version ────────────────────────
-/*
+/* ── Variant: find a specific bundle by name + version ──────────────────
 release_bundles.find({
   "name":    {"$eq": "maptek-geo-suite"},
   "version": {"$eq": "2026.demo.1"}
@@ -24,8 +19,7 @@ release_bundles.find({
 */
 
 
-// ── Variant: all bundles created since October 2025 ──────────────────────────
-/*
+/* ── Variant: all bundles created since October 2025 ────────────────────
 release_bundles.find({
   "@rb.project": {"$eq": "maptek-geo-suite"},
   "created":     {"$gte": "2025-10-01T00:00:00.000Z"}
@@ -34,8 +28,7 @@ release_bundles.find({
 */
 
 
-// ── Variant: find bundles created from GitHub Actions pipelines ───────────────
-/*
+/* ── Variant: find bundles created from GitHub Actions pipelines ─────────
 release_bundles.find({
   "@rb.pipeline": {"$eq": "github-actions"}
 }).include("name", "version", "created", "properties")

@@ -1,11 +1,9 @@
-// USE CASE: Filter artifacts by component team or service type
-//
-// Per-artifact properties include component.team and component.service_type,
-// allowing operations teams to query their own slice of any release.
-//
-// Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql
+/* USE CASE: Filter artifacts by component team or service type
+   Per-artifact properties include component.team and component.service_type,
+   allowing operations teams to query their own slice of any release.
+   Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql */
 
-// ── Platform team artifacts (geo-api + auth-service) ─────────────────────────
+/* ── Platform team artifacts (geo-api + auth-service) ─────────────────── */
 items.find({
   "@project.name":   {"$eq": "maptek-geo-suite"},
   "@component.team": {"$eq": "platform"},
@@ -15,34 +13,31 @@ items.find({
 ).sort({"$asc": ["path"]})
 
 
-// ── Security services across ALL versions ────────────────────────────────────
-/*
+/* ── Security services across ALL versions ──────────────────────────────
 items.find({
-  "@project.name":          {"$eq": "maptek-geo-suite"},
+  "@project.name":           {"$eq": "maptek-geo-suite"},
   "@component.service_type": {"$eq": "security"},
-  "repo":                   {"$match": "maptek-docker-local"}
+  "repo":                    {"$match": "maptek-docker-local"}
 }).include("name", "repo", "path", "created", "property")
   .sort({"$desc": ["created"]})
 */
 
 
-// ── Worker services for a specific version ───────────────────────────────────
-/*
+/* ── Worker services for a specific version ────────────────────────────
 items.find({
-  "@project.name":          {"$eq": "maptek-geo-suite"},
-  "@project.version":       {"$eq": "2026.demo.1"},
+  "@project.name":           {"$eq": "maptek-geo-suite"},
+  "@project.version":        {"$eq": "2026.demo.1"},
   "@component.service_type": {"$eq": "worker"},
-  "repo":                   {"$match": "maptek-docker-local"}
+  "repo":                    {"$match": "maptek-docker-local"}
 }).include("name", "repo", "path", "property")
 */
 
 
-// ── Find all unique versions that contain a frontend component ────────────────
-/*
+/* ── Find all unique versions that contain a frontend component ─────────
 items.find({
-  "@project.name":          {"$eq": "maptek-geo-suite"},
+  "@project.name":           {"$eq": "maptek-geo-suite"},
   "@component.service_type": {"$eq": "frontend"},
-  "repo":                   {"$match": "maptek-docker-local"}
+  "repo":                    {"$match": "maptek-docker-local"}
 }).include("name", "path", "property")
   .sort({"$desc": ["created"]})
 */
