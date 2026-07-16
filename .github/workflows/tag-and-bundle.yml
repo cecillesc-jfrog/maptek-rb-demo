@@ -114,14 +114,18 @@ jobs:
           }
           EOF
 
-      # Release Bundle v2: create the bundle from the AQL spec.
-      # rb.* properties are stamped on each artifact in Job 1 (RB v2 CLI
-      # does not support --prop on rbc; artifact-level props are queryable).
-      - name: Create Release Bundle v2
+      # Release Bundle v2: create the bundle then immediately annotate it.
+      # jf rbc does not support --tag; jf rba (release-bundle-annotate) is
+      # the correct command. Both run in the same step alongside the signing key.
+      - name: Create Release Bundle v2 and tag
         run: |
           jf rbc \
             --spec=rb-spec.json \
             --signing-key="default-lifecycle-key" \
+            "${{ env.BUILD_NAME }}" \
+            "${{ env.VERSION }}"
+          jf rba \
+            --tag="QA-Passed" \
             "${{ env.BUILD_NAME }}" \
             "${{ env.VERSION }}"
 
@@ -130,6 +134,7 @@ jobs:
           echo ""
           echo "Release Bundle created: ${{ env.BUILD_NAME }} @ ${{ env.VERSION }}"
           echo "Build type            : ${{ env.BUILD_TYPE }}"
+          echo "Tag                   : QA-Passed"
           echo ""
           echo "Properties on each manifest.json (per-artifact + collective):"
           echo "  project.name=${{ env.BUILD_NAME }}"
