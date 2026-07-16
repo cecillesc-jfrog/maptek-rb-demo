@@ -61,13 +61,14 @@ jobs:
       - name: Verify connectivity
         run: jf rt ping
 
-      # Each manifest.json gets 8 searchable properties.
-      # These are the PER-ARTIFACT tags — queryable independently of any bundle.
+      # Each manifest.json gets per-artifact AND bundle-level properties.
+      # RB v2 CLI does not support --prop on jf rbc, so bundle-level (rb.*)
+      # properties are stamped onto every artifact — fully queryable via AQL.
       - name: Tag ${{ matrix.service }} — per-artifact metadata
         run: |
           jf rt sp \
             "${{ env.LOCAL_REPO }}/${{ matrix.service }}/${{ env.VERSION }}/manifest.json" \
-            "project.name=${{ env.BUILD_NAME }};project.version=${{ env.VERSION }};build.type=${{ env.BUILD_TYPE }};component.name=${{ matrix.service }};component.team=${{ matrix.team }};component.service_type=${{ matrix.type }};git.commit=${{ github.sha }};build.number=${{ env.BUILD_NUMBER }}"
+            "project.name=${{ env.BUILD_NAME }};project.version=${{ env.VERSION }};build.type=${{ env.BUILD_TYPE }};component.name=${{ matrix.service }};component.team=${{ matrix.team }};component.service_type=${{ matrix.type }};git.commit=${{ github.sha }};build.number=${{ env.BUILD_NUMBER }};rb.project=${{ env.BUILD_NAME }};rb.build_type=${{ env.BUILD_TYPE }};rb.pipeline=github-actions"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 2 — Verify tags then create the Release Bundle
@@ -113,15 +114,14 @@ jobs:
           }
           EOF
 
-      # --prop sets BUNDLE-LEVEL (collective) metadata on the Release Bundle.
-      # These properties describe the bundle as a whole, not individual artifacts.
-      # Both sets (per-artifact + bundle-level) are independently queryable via AQL.
-      - name: Create Release Bundle — with collective metadata
+      # Release Bundle v2: create the bundle from the AQL spec.
+      # rb.* properties are stamped on each artifact in Job 1 (RB v2 CLI
+      # does not support --prop on rbc; artifact-level props are queryable).
+      - name: Create Release Bundle v2
         run: |
           jf rbc \
             --spec=rb-spec.json \
             --signing-key="default-lifecycle-key" \
-            --prop="rb.project=${{ env.BUILD_NAME }};rb.version=${{ env.VERSION }};rb.build_type=${{ env.BUILD_TYPE }};rb.components=geo-api,data-processor,visualizer,report-generator,auth-service;rb.artifact_count=5;rb.pipeline=github-actions;rb.git_commit=${{ github.sha }}" \
             "${{ env.BUILD_NAME }}" \
             "${{ env.VERSION }}"
 
@@ -131,20 +131,15 @@ jobs:
           echo "Release Bundle created: ${{ env.BUILD_NAME }} @ ${{ env.VERSION }}"
           echo "Build type            : ${{ env.BUILD_TYPE }}"
           echo ""
-          echo "Per-artifact properties (on each manifest.json):"
+          echo "Properties on each manifest.json (per-artifact + collective):"
           echo "  project.name=${{ env.BUILD_NAME }}"
           echo "  project.version=${{ env.VERSION }}"
           echo "  build.type=${{ env.BUILD_TYPE }}"
           echo "  component.name=<service>  component.team=<team>  component.service_type=<type>"
           echo "  git.commit=${{ github.sha }}"
           echo "  build.number=${{ env.BUILD_NUMBER }}"
-          echo ""
-          echo "Bundle-level properties (on the Release Bundle):"
           echo "  rb.project=${{ env.BUILD_NAME }}"
-          echo "  rb.version=${{ env.VERSION }}"
           echo "  rb.build_type=${{ env.BUILD_TYPE }}"
-          echo "  rb.components=geo-api,data-processor,visualizer,report-generator,auth-service"
-          echo "  rb.artifact_count=5"
           echo "  rb.pipeline=github-actions"
           echo ""
           echo "View at: https://hts1.jfrog.io/ui/release-lifecycle"
