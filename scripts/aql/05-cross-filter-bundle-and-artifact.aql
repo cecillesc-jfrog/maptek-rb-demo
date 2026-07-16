@@ -1,0 +1,53 @@
+// USE CASE: Cross-filter — artifacts matching BOTH individual AND bundle metadata
+//
+// This is the dual-tagging capability MAPTEK asked about:
+//   - Per-artifact tags:  component.team, component.service_type, build.type …
+//   - Bundle-level tags:  rb.project, rb.build_type, rb.components …
+//
+// AQL join pattern: use release_bundle.* fields inside items.find() to filter
+// artifacts that belong to a specific bundle AND match individual properties.
+//
+// Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql
+
+// ── Step 1: List artifacts inside a specific Release Bundle ──────────────────
+//    Shows what is in the bundle before filtering.
+release_bundles.find({
+  "name":    {"$eq": "maptek-geo-suite"},
+  "version": {"$eq": "2026.demo.1"}
+}).include("artifacts")
+
+
+// ── Step 2: Cross-filter — "platform" team artifacts IN a release bundle ──────
+//    Joins bundle membership with per-artifact properties.
+/*
+items.find({
+  "release_bundle.name":    {"$eq": "maptek-geo-suite"},
+  "release_bundle.version": {"$eq": "2026.demo.1"},
+  "@component.team":        {"$eq": "platform"}
+}).include("name", "repo", "path", "property")
+*/
+
+
+// ── Step 3: All "security" artifacts across every release-type bundle ─────────
+//    Useful for a security audit: show all auth components ever released.
+/*
+items.find({
+  "release_bundle.name":      {"$match": "maptek-*"},
+  "@component.service_type":  {"$eq":    "security"},
+  "@build.type":              {"$eq":    "release"}
+}).include("name", "repo", "path", "created", "property")
+  .sort({"$desc": ["created"]})
+*/
+
+
+// ── Step 4: Filter by bundle-level metadata AND per-artifact team ─────────────
+//    "Give me platform components from all bundles created by GitHub Actions"
+/*
+items.find({
+  "release_bundle.name":  {"$match": "maptek-*"},
+  "@rb.pipeline":         {"$eq":    "github-actions"},
+  "@component.team":      {"$eq":    "platform"},
+  "@build.type":          {"$eq":    "release"}
+}).include("name", "repo", "path", "created", "property")
+  .sort({"$desc": ["created"]})
+*/

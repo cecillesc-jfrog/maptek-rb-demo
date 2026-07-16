@@ -1,0 +1,150 @@
+name: Tag Artifacts & Create Release Bundle
+
+# Demonstrates:
+#   1. Per-artifact metadata tagging on existing Docker manifests
+#   2. AQL-driven Release Bundle creation
+#   3. Bundle-level (collective) metadata
+#   4. AQL queries for filtering by individual OR collective metadata
+#
+# Customer use case (MAPTEK):
+#   "Find build 2026.abc.123 for project x"
+#   "Find all release builds for project y since October 2025"
+#   "Tag each artifact + tag the bundle; filter against both"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string  e.g. 2026.demo.1'
+        required: true
+        default: '2026.demo.1'
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options: [release, snapshot, hotfix]
+
+# ── Shared values ─────────────────────────────────────────────────────────────
+env:
+  JF_URL:          https://hts1.jfrog.io
+  JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+  LOCAL_REPO:      maptek-docker-local      # artifacts already live here
+  BUILD_NAME:      maptek-geo-suite
+  VERSION:         ${{ inputs.version }}
+  BUILD_TYPE:      ${{ inputs.build_type }}
+  # Stable build number across all matrix jobs
+  BUILD_NUMBER:    ${{ inputs.version }}-${{ github.run_number }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Tag each Docker manifest with per-artifact metadata
+#          Runs in parallel for all 5 services.
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  tag-artifacts:
+    name: "Tag — ${{ matrix.service }}"
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: geo-api,          team: platform,  type: api      }
+          - { service: data-processor,   team: core,      type: worker   }
+          - { service: visualizer,       team: frontend,  type: frontend }
+          - { service: report-generator, team: core,      type: worker   }
+          - { service: auth-service,     team: platform,  type: security }
+
+    steps:
+      - name: Set up JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v5
+
+      - name: Verify connectivity
+        run: jf rt ping
+
+      # Each manifest.json gets 8 searchable properties.
+      # These are the PER-ARTIFACT tags — queryable independently of any bundle.
+      - name: Tag ${{ matrix.service }} — per-artifact metadata
+        run: |
+          jf rt sp \
+            "${{ env.LOCAL_REPO }}/${{ matrix.service }}/${{ env.VERSION }}/manifest.json" \
+            "project.name=${{ env.BUILD_NAME }};project.version=${{ env.VERSION }};build.type=${{ env.BUILD_TYPE }};component.name=${{ matrix.service }};component.team=${{ matrix.team }};component.service_type=${{ matrix.type }};git.commit=${{ github.sha }};build.number=${{ env.BUILD_NUMBER }}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Verify tags then create the Release Bundle
+# ─────────────────────────────────────────────────────────────────────────────
+  create-release-bundle:
+    name: Create Release Bundle
+    runs-on: self-hosted
+    needs: tag-artifacts
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v5
+
+      # AQL dry-run: confirm all 5 manifests are tagged before bundling.
+      # This also demonstrates the "find artifacts by project+version" query.
+      - name: AQL — verify tagged artifacts
+        run: |
+          echo "=== All artifacts tagged for ${{ env.BUILD_NAME }} @ ${{ env.VERSION }} ==="
+          jf rt search \
+            --props "project.name=${{ env.BUILD_NAME }};project.version=${{ env.VERSION }}" \
+            "${{ env.LOCAL_REPO }}/**"
+
+      # The spec selects artifacts via AQL rather than by path pattern.
+      # This is the recommended approach: bundle what your query finds, not
+      # a hard-coded list of paths — so the bundle automatically reflects
+      # whatever was tagged in Job 1.
+      - name: Write AQL bundle spec
+        run: |
+          cat > rb-spec.json <<EOF
+          {
+            "files": [{
+              "aql": {
+                "items.find": {
+                  "@project.name": {"\$eq": "${{ env.BUILD_NAME }}"},
+                  "@project.version": {"\$eq": "${{ env.VERSION }}"},
+                  "repo": {"\$match": "${{ env.LOCAL_REPO }}"}
+                }
+              }
+            }]
+          }
+          EOF
+
+      # --prop sets BUNDLE-LEVEL (collective) metadata on the Release Bundle.
+      # These properties describe the bundle as a whole, not individual artifacts.
+      # Both sets (per-artifact + bundle-level) are independently queryable via AQL.
+      - name: Create Release Bundle — with collective metadata
+        run: |
+          jf rbc \
+            --spec=rb-spec.json \
+            --signing-key="${{ secrets.JF_SIGNING_KEY }}" \
+            --prop="rb.project=${{ env.BUILD_NAME }};rb.version=${{ env.VERSION }};rb.build_type=${{ env.BUILD_TYPE }};rb.components=geo-api,data-processor,visualizer,report-generator,auth-service;rb.artifact_count=5;rb.pipeline=github-actions;rb.git_commit=${{ github.sha }}" \
+            "${{ env.BUILD_NAME }}" \
+            "${{ env.VERSION }}"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "Release Bundle created: ${{ env.BUILD_NAME }} @ ${{ env.VERSION }}"
+          echo "Build type            : ${{ env.BUILD_TYPE }}"
+          echo ""
+          echo "Per-artifact properties (on each manifest.json):"
+          echo "  project.name=${{ env.BUILD_NAME }}"
+          echo "  project.version=${{ env.VERSION }}"
+          echo "  build.type=${{ env.BUILD_TYPE }}"
+          echo "  component.name=<service>  component.team=<team>  component.service_type=<type>"
+          echo "  git.commit=${{ github.sha }}"
+          echo "  build.number=${{ env.BUILD_NUMBER }}"
+          echo ""
+          echo "Bundle-level properties (on the Release Bundle):"
+          echo "  rb.project=${{ env.BUILD_NAME }}"
+          echo "  rb.version=${{ env.VERSION }}"
+          echo "  rb.build_type=${{ env.BUILD_TYPE }}"
+          echo "  rb.components=geo-api,data-processor,visualizer,report-generator,auth-service"
+          echo "  rb.artifact_count=5"
+          echo "  rb.pipeline=github-actions"
+          echo ""
+          echo "View at: https://hts1.jfrog.io/ui/release-lifecycle"

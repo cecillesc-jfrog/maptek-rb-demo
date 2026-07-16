@@ -1,0 +1,35 @@
+// USE CASE: "Find build 2026.abc.123 for project maptek-geo-suite"
+//
+// Queries individual artifact metadata set by the CI pipeline.
+// Run via:  POST https://hts1.jfrog.io/artifactory/api/search/aql
+//
+// Replace the values below to filter any project / version combination.
+
+// ── Find all artifacts for a specific project version ────────────────────────
+items.find({
+  "@project.name":    {"$eq": "maptek-geo-suite"},
+  "@project.version": {"$eq": "2026.demo.1"},
+  "repo":             {"$match": "maptek-docker-local"}
+}).include(
+  "name", "repo", "path", "created", "size", "property"
+).sort({"$asc": ["path"]})
+
+
+// ── Variant: find by build number (more precise — includes run counter) ──────
+/*
+items.find({
+  "@build.number": {"$eq": "2026.demo.1-42"},
+  "repo":          {"$match": "maptek-docker-local"}
+}).include("name", "repo", "path", "property")
+*/
+
+
+// ── Variant: find across ALL versions of a project ───────────────────────────
+/*
+items.find({
+  "@project.name": {"$eq": "maptek-geo-suite"},
+  "repo":          {"$match": "maptek-docker-local"}
+}).include("name", "repo", "path", "created", "property")
+  .sort({"$desc": ["created"]})
+  .limit(20)
+*/
