@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version string  e.g. 2026.demo.1'
+        description: 'Bundle version string  e.g. 2026.demo.1 / 2026.hotfix.1'
         required: true
         default: '2026.demo.1'
       build_type:
@@ -24,17 +24,25 @@ on:
         default: 'release'
         type: choice
         options: [release, snapshot, hotfix]
+      artifact_version:
+        description: 'Artifact path version in maptek-docker-local (default: 2026.demo.1)'
+        required: true
+        default: '2026.demo.1'
 
 # ── Shared values ─────────────────────────────────────────────────────────────
 env:
-  JF_URL:          https://hts1.jfrog.io
-  JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-  LOCAL_REPO:      maptek-docker-local      # artifacts already live here
-  BUILD_NAME:      maptek-geo-suite
-  VERSION:         ${{ inputs.version }}
-  BUILD_TYPE:      ${{ inputs.build_type }}
+  JF_URL:             https://hts1.jfrog.io
+  JF_ACCESS_TOKEN:    ${{ secrets.JF_ACCESS_TOKEN }}
+  LOCAL_REPO:         maptek-docker-local      # artifacts already live here
+  BUILD_NAME:         maptek-geo-suite
+  VERSION:            ${{ inputs.version }}
+  BUILD_TYPE:         ${{ inputs.build_type }}
+  # ARTIFACT_VERSION is the actual path in the repo (always 2026.demo.1 for this demo).
+  # VERSION is the logical bundle version — change this to create new bundles
+  # from the same underlying artifacts (e.g. 2026.hotfix.1, 2026.demo.2).
+  ARTIFACT_VERSION:   ${{ inputs.artifact_version }}
   # Stable build number across all matrix jobs
-  BUILD_NUMBER:    ${{ inputs.version }}-${{ github.run_number }}
+  BUILD_NUMBER:       ${{ inputs.version }}-${{ github.run_number }}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 1 — Tag each Docker manifest with per-artifact metadata
@@ -67,7 +75,7 @@ jobs:
       - name: Tag ${{ matrix.service }} — per-artifact metadata
         run: |
           jf rt sp \
-            "${{ env.LOCAL_REPO }}/${{ matrix.service }}/${{ env.VERSION }}/manifest.json" \
+            "${{ env.LOCAL_REPO }}/${{ matrix.service }}/${{ env.ARTIFACT_VERSION }}/manifest.json" \
             "project.name=${{ env.BUILD_NAME }};project.version=${{ env.VERSION }};build.type=${{ env.BUILD_TYPE }};component.name=${{ matrix.service }};component.team=${{ matrix.team }};component.service_type=${{ matrix.type }};git.commit=${{ github.sha }};build.number=${{ env.BUILD_NUMBER }};rb.project=${{ env.BUILD_NAME }};rb.build_type=${{ env.BUILD_TYPE }};rb.pipeline=github-actions"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -107,7 +115,8 @@ jobs:
                 "items.find": {
                   "@project.name": {"\$eq": "${{ env.BUILD_NAME }}"},
                   "@project.version": {"\$eq": "${{ env.VERSION }}"},
-                  "repo": {"\$match": "${{ env.LOCAL_REPO }}"}
+                  "repo": {"\$match": "${{ env.LOCAL_REPO }}"},
+                  "path": {"\$match": "*/${{ env.ARTIFACT_VERSION }}"}
                 }
               }
             }]
