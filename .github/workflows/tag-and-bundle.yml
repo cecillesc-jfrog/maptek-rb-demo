@@ -120,7 +120,7 @@ jobs:
         run: |
           jf rbc \
             --spec=rb-spec.json \
-            --signing-key="${{ secrets.JF_SIGNING_KEY }}" \
+            --signing-key="default-lifecycle-key" \
             --prop="rb.project=${{ env.BUILD_NAME }};rb.version=${{ env.VERSION }};rb.build_type=${{ env.BUILD_TYPE }};rb.components=geo-api,data-processor,visualizer,report-generator,auth-service;rb.artifact_count=5;rb.pipeline=github-actions;rb.git_commit=${{ github.sha }}" \
             "${{ env.BUILD_NAME }}" \
             "${{ env.VERSION }}"
