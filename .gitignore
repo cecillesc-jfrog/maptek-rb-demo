@@ -3,3 +3,4 @@
 .env.*
 rb-spec.json
 *.log
+demo/demo-script.md
