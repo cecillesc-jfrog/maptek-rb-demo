@@ -1,6 +1,5 @@
 release_bundles.find({
-  "@rb.project":    {"$eq": "maptek-geo-suite"},
-  "@rb.build_type": {"$eq": "release"}
+  "name": {"$match": "maptek-*"}
 }).include(
-  "name", "version", "created", "status", "properties"
+  "name", "version", "created", "status"
 ).sort({"$desc": ["created"]})
