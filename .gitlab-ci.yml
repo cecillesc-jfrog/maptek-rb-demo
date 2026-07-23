@@ -1,0 +1,150 @@
+# Demonstrates:
+#   1. Per-artifact metadata tagging on existing Docker manifests
+#   2. AQL-driven Release Bundle creation
+#   3. Bundle-level (collective) metadata
+#   4. AQL queries for filtering by individual OR collective metadata
+#
+# Customer use case (MAPTEK):
+#   "Find build 2026.abc.123 for project x"
+#   "Find all release builds for project y since October 2025"
+#   "Tag each artifact + tag the bundle; filter against both"
+#
+# This is the GitLab CI equivalent of .github/workflows/tag-and-bundle.yml —
+# same artifacts, same properties, same Release Bundle, just orchestrated
+# from GitLab instead of GitHub Actions. Bundles created here are tagged
+# rb.pipeline=gitlab-ci so AQL can cross-filter against the GitHub-created
+# ones (rb.pipeline=github-actions) — see scripts/aql/07.
+#
+# Prerequisites:
+#   - A self-hosted GitLab Runner registered with the tag `self-hosted`
+#     (shell executor), on a host that can reach hts1.jfrog.io and
+#     install-cli.jfrog.io (same network/IP-allowlist constraints as the
+#     GitHub Actions self-hosted runner).
+#       gitlab-runner register --tag-list="self-hosted" --executor=shell
+#   - Project CI/CD variables (Settings > CI/CD > Variables):
+#       JF_ACCESS_TOKEN  (masked, protected)  — same token used by the
+#                                                GitHub Actions workflow
+#
+# To trigger: CI/CD > Pipelines > Run pipeline, and fill in the variables
+# below (VERSION / BUILD_TYPE / ARTIFACT_VERSION are prompted in the UI).
+
+stages:
+  - tag
+  - bundle
+
+variables:
+  JF_URL: "https://hts1.jfrog.io"
+  LOCAL_REPO: "maptek-docker-local" # artifacts already live here
+  BUILD_NAME: "maptek-geo-suite"
+  # ARTIFACT_VERSION is the actual path in the repo (always 2026.demo.1 for this demo).
+  # VERSION is the logical bundle version — change this to create new bundles
+  # from the same underlying artifacts (e.g. 2026.gitlab.2).
+  VERSION:
+    value: "2026.gitlab.1"
+    description: "Bundle version string, e.g. 2026.gitlab.1"
+  BUILD_TYPE:
+    value: "release"
+    options:
+      - "release"
+      - "snapshot"
+      - "hotfix"
+    description: "Build type"
+  ARTIFACT_VERSION:
+    value: "2026.demo.1"
+    description: "Artifact path version in maptek-docker-local (default: 2026.demo.1)"
+  # Stable build number across all matrix jobs
+  BUILD_NUMBER: "${VERSION}-${CI_PIPELINE_IID}"
+
+default:
+  tags:
+    - self-hosted
+  before_script:
+    - curl -fL https://install-cli.jfrog.io | sh
+    - jf rt ping
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 1 — Tag each Docker manifest with per-artifact metadata
+#           Runs in parallel for all 5 services.
+# ─────────────────────────────────────────────────────────────────────────────
+tag-artifacts:
+  stage: tag
+  parallel:
+    matrix:
+      - SERVICE: geo-api
+        TEAM: platform
+        TYPE: api
+      - SERVICE: data-processor
+        TEAM: core
+        TYPE: worker
+      - SERVICE: visualizer
+        TEAM: frontend
+        TYPE: frontend
+      - SERVICE: report-generator
+        TEAM: core
+        TYPE: worker
+      - SERVICE: auth-service
+        TEAM: platform
+        TYPE: security
+  # Each manifest.json gets per-artifact AND bundle-level properties.
+  # RB v2 CLI does not support --prop on jf rbc, so bundle-level (rb.*)
+  # properties are stamped onto every artifact — fully queryable via AQL.
+  script:
+    - >
+      jf rt sp
+      "${LOCAL_REPO}/${SERVICE}/${ARTIFACT_VERSION}/manifest.json"
+      "project.name=${BUILD_NAME};project.version=${VERSION};build.type=${BUILD_TYPE};component.name=${SERVICE};component.team=${TEAM};component.service_type=${TYPE};git.commit=${CI_COMMIT_SHA};build.number=${BUILD_NUMBER};rb.project=${BUILD_NAME};rb.build_type=${BUILD_TYPE};rb.pipeline=gitlab-ci"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 2 — Verify tags then create the Release Bundle
+# ─────────────────────────────────────────────────────────────────────────────
+create-release-bundle:
+  stage: bundle
+  needs:
+    - tag-artifacts
+  script:
+    # AQL dry-run: confirm all 5 manifests are tagged before bundling.
+    # This also demonstrates the "find artifacts by project+version" query.
+    - echo "=== All artifacts tagged for ${BUILD_NAME} @ ${VERSION} ==="
+    - jf rt search --props "project.name=${BUILD_NAME};project.version=${VERSION}" "${LOCAL_REPO}/**"
+    # The spec selects artifacts via AQL rather than by path pattern.
+    # This is the recommended approach: bundle what your query finds, not
+    # a hard-coded list of paths — so the bundle automatically reflects
+    # whatever was tagged in Stage 1.
+    - |
+      cat > rb-spec.json <<EOF
+      {
+        "files": [{
+          "aql": {
+            "items.find": {
+              "@project.name": {"\$eq": "${BUILD_NAME}"},
+              "@project.version": {"\$eq": "${VERSION}"},
+              "repo": {"\$match": "${LOCAL_REPO}"},
+              "path": {"\$match": "*/${ARTIFACT_VERSION}"}
+            }
+          }
+        }]
+      }
+      EOF
+    # Release Bundle v2: create the bundle then immediately annotate it.
+    # jf rbc does not support --tag; jf rba (release-bundle-annotate) is
+    # the correct command. Both run in the same step alongside the signing key.
+    - jf rbc --spec=rb-spec.json --signing-key="default-lifecycle-key" "${BUILD_NAME}" "${VERSION}"
+    - jf rba --tag="QA-Passed" "${BUILD_NAME}" "${VERSION}"
+    - |
+      echo ""
+      echo "Release Bundle created: ${BUILD_NAME} @ ${VERSION}"
+      echo "Build type            : ${BUILD_TYPE}"
+      echo "Tag                   : QA-Passed"
+      echo ""
+      echo "Properties on each manifest.json (per-artifact + collective):"
+      echo "  project.name=${BUILD_NAME}"
+      echo "  project.version=${VERSION}"
+      echo "  build.type=${BUILD_TYPE}"
+      echo "  component.name=<service>  component.team=<team>  component.service_type=<type>"
+      echo "  git.commit=${CI_COMMIT_SHA}"
+      echo "  build.number=${BUILD_NUMBER}"
+      echo "  rb.project=${BUILD_NAME}"
+      echo "  rb.build_type=${BUILD_TYPE}"
+      echo "  rb.pipeline=gitlab-ci"
+      echo ""
+      echo "View at: https://hts1.jfrog.io/ui/release-lifecycle"
