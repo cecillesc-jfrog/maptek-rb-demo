@@ -1,13 +1,12 @@
 # Demonstrates:
 #   1. Per-artifact metadata tagging on existing Docker manifests
 #   2. AQL-driven Release Bundle creation
-#   3. Bundle-level (collective) metadata
-#   4. AQL queries for filtering by individual OR collective metadata
+#   3. AQL queries for filtering by individual OR collective metadata
 #
-# Customer use case (MAPTEK):
+# Customer use case:
 #   "Find build 2026.abc.123 for project x"
-#   "Find all release builds for project y since October 2025"
-#   "Tag each artifact + tag the bundle; filter against both"
+#   "Find all release builds for project y since a certain date"
+#   "Tag each artifact/bundle; filter against both"
 #
 # This is the GitLab CI equivalent of .github/workflows/tag-and-bundle.yml —
 # same artifacts, same properties, same Release Bundle, just orchestrated
@@ -17,9 +16,7 @@
 #
 # Prerequisites:
 #   - A self-hosted GitLab Runner registered with the tag `self-hosted`
-#     (shell executor), on a host that can reach hts1.jfrog.io and
-#     install-cli.jfrog.io (same network/IP-allowlist constraints as the
-#     GitHub Actions self-hosted runner).
+#     (shell executor), on a host that can reach a JFrog instance.
 #       gitlab-runner register --tag-list="self-hosted" --executor=shell
 #   - Project CI/CD variables (Settings > CI/CD > Variables):
 #       JF_ACCESS_TOKEN  (masked, protected)  — same token used by the
@@ -59,7 +56,9 @@ default:
   tags:
     - self-hosted
   before_script:
-    - curl -fL https://install-cli.jfrog.io | sh
+    - curl -fL https://install-cli.jfrog.io | sh  
+    #Follow the template recommendations first depending on the environment set up - 
+    # the curl method is specific to a self-hosted runner setup in this case.
     - jf rt ping
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,8 +125,7 @@ create-release-bundle:
       }
       EOF
     # Release Bundle v2: create the bundle then immediately annotate it.
-    # jf rbc does not support --tag; jf rba (release-bundle-annotate) is
-    # the correct command. Both run in the same step alongside the signing key.
+    # Both run in the same step alongside the signing key.
     - jf rbc --spec=rb-spec.json --signing-key="default-lifecycle-key" "${BUILD_NAME}" "${VERSION}"
     - jf rba --tag="QA-Passed" "${BUILD_NAME}" "${VERSION}"
     - |

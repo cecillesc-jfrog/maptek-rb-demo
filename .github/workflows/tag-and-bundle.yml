@@ -3,13 +3,12 @@ name: Tag Artifacts & Create Release Bundle
 # Demonstrates:
 #   1. Per-artifact metadata tagging on existing Docker manifests
 #   2. AQL-driven Release Bundle creation
-#   3. Bundle-level (collective) metadata
-#   4. AQL queries for filtering by individual OR collective metadata
+#   3. AQL queries for filtering by individual OR collective metadata
 #
-# Customer use case (MAPTEK):
+# Customer use case:
 #   "Find build 2026.abc.123 for project x"
-#   "Find all release builds for project y since October 2025"
-#   "Tag each artifact + tag the bundle; filter against both"
+#   "Find all release builds for project y since a certain date"
+#   "Tag each artifact/bundle; filter against both"
 
 on:
   workflow_dispatch:
@@ -124,8 +123,7 @@ jobs:
           EOF
 
       # Release Bundle v2: create the bundle then immediately annotate it.
-      # jf rbc does not support --tag; jf rba (release-bundle-annotate) is
-      # the correct command. Both run in the same step alongside the signing key.
+      # Both run in the same step alongside the signing key.
       - name: Create Release Bundle v2 and tag
         run: |
           jf rbc \
