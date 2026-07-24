@@ -12,3 +12,4 @@ JF_URL="https://hts1.jfrog.io"
 curl -s \
   -H "Authorization: Bearer $TOKEN" \
   "${JF_URL}/lifecycle/api/v2/release_bundle/records/${BUNDLE_NAME}?tag=${TAG}" | jq .
+
